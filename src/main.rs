@@ -1,4 +1,5 @@
 use axum::{
+    extract,
     handler::{get, post},
     http::{StatusCode, Request, header::{HeaderMap, HeaderName, HeaderValue}},
     response::IntoResponse,
@@ -13,7 +14,7 @@ use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::io::prelude::*;
-
+use urldecode;
 
 #[tokio::main]
 async fn main() {
@@ -22,10 +23,9 @@ async fn main() {
 
     // build our application with a route
     let app = Router::new()    
-        // .route("/", get(root))    
-        // .route("/files", get(files))
+        .route("/files", get(files))
         .route(
-            "/static",
+            "/static/:name",
             get(read_file)
         );
 
@@ -39,13 +39,14 @@ async fn main() {
         .unwrap();
 }
 
-async fn read_file() -> (HeaderMap, Vec<u8>) {
+async fn read_file(extract::Path(name): extract::Path<String>) -> (HeaderMap, Vec<u8>) {
     let mut headers = HeaderMap::new();
     headers.insert(
         HeaderName::from_static("content-type"),
         HeaderValue::from_static("image/jpeg"),
     );
-    let filename = "pictures/Horseshoe Bend, U.S..jpg".to_string();
+    let filename = format!("pictures/{}", urldecode::decode(name)).to_string();
+    println!("{}", filename);
     let mut f = File::open(&filename).expect("no file found");
     let metadata = fs::metadata(&filename).expect("unable to read metadata");    
     let mut buffer = vec![0; metadata.len() as usize];
@@ -53,12 +54,6 @@ async fn read_file() -> (HeaderMap, Vec<u8>) {
     
     (headers, buffer)
 }
-
-// basic handler that responds with a static string
-async fn root() -> &'static str {
-    "Hello, World!"
-}
-
 
 async fn files() -> Json<Vec<String>> {
     let paths = fs::read_dir("pictures").unwrap();
