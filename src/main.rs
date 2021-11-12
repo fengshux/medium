@@ -2,7 +2,7 @@ use axum::{
     extract,
     handler::{get, post},
     http::{StatusCode, Request, header::{HeaderMap, HeaderName, HeaderValue}},
-    response::IntoResponse,
+    response::{IntoResponse,Html},
     Json, Router,
     service,
     routing::BoxRoute
@@ -22,7 +22,8 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     // build our application with a route
-    let app = Router::new()    
+    let app = Router::new()
+        .route("/index.html", get(index))
         .route("/files", get(files))
         .route(
             "/static/:name",
@@ -61,4 +62,8 @@ async fn files() -> Json<Vec<String>> {
     let list = paths.map(|path| { path.unwrap().file_name().into_string().map_or("".to_string(), |x| x ) });
     
     return Json(list.collect());
+}
+
+async fn index() -> Html<&'static str> {
+    Html("<h1>Hello, World!</h1>")
 }
